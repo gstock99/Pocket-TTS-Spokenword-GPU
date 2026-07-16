@@ -238,6 +238,10 @@ class BatchGenerationThread(QThread):
         generator._pause_injection_enabled = pi_enabled
         generator._pause_durations = self.params.get('pause_durations', {})
         
+        # Generate output path
+        dataset_paths = AudiobookGenerator.generate_output_paths(batch_file.file_path, voice_path)
+        output_path = str(dataset_paths['final_audio_path'])
+        
         # Progress callback for this file
         def progress_callback(progress_data):
             batch_file.current_chunk = progress_data.get('current_chunk', 0)
@@ -253,7 +257,7 @@ class BatchGenerationThread(QThread):
         result = generator.generate_audiobook(
             chunks=chunks,
             voice_path=voice_path,
-            output_path=None,  # Auto-generate
+            output_path=output_path,
             progress_callback=progress_callback,
             source_file=batch_file.file_path,
             save_dataset_chunks=True
