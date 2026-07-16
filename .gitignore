@@ -44,3 +44,6 @@ __pycache__/
 
 # Old duplicate folder
 Pocket TTS/
+
+# Release archives
+*.zip
