@@ -1,1 +1,0 @@
-# Qt desktop GUI for audiobook generation

@@ -1,176 +1,197 @@
-# DNXS-Spokenword Pocket-TTS
+# Pocket-TTS GPU
 
-# Emotion-Driven Audiobook Generator
+# GPU-Accelerated Emotion-Driven Audiobook Generator
 
 <img width="1446" height="622" alt="pocket-tts-logo-v2-transparent" src="https://github.com/user-attachments/assets/637b5ed6-831f-4023-9b4c-741be21ab238" />
 
-An enhanced version of Kyutai's Pocket TTS that transforms plain text into emotionally expressive audiobooks. Uses advanced AI emotion analysis to create natural, expressive narration with intelligent text chunking and voice adaptation.
+A GPU-accelerated version of Kyutai's Pocket TTS that transforms plain text into emotionally expressive audiobooks. Uses NVIDIA CUDA for significantly faster generation with parallel processing.
 
 **✨ Key Features:**
 
+- **GPU Acceleration**: CUDA support for 6-8x realtime generation speed
+- **Parallel Processing**: Multiple GPU workers for chunk-level parallelism
 - **Emotion Analysis**: Automatic detection of emotions in text using DistilRoBERTa
 - **Smart Chunking**: Intelligent text segmentation based on sentence structure
 - **Expressive TTS**: Emotion-aware parameter control for natural voice variation
-- **Audiobook Generation**: Complete pipeline for book-to-audio conversion
+- **Batch Processing**: Process multiple files with per-file voice selection
 - **Voice Cloning**: Custom voice support with emotion preservation
 - **GUI Interface**: User-friendly desktop application for easy audiobook creation
-- **Batch Processing**: Convert entire books or document collections
 
-Supports Python 3.10, 3.11, 3.12, 3.13 and 3.14. Requires PyTorch 2.5+. CPU-only operation.
+Supports Python 3.12+ and requires NVIDIA GPU with CUDA support.
 
-## Main takeaways
+## Requirements
 
-* **Emotion-Driven Generation**: AI-powered emotion analysis for expressive narration
-* **Smart Text Processing**: Intelligent chunking and structure detection
-* **Audiobook Pipeline**: Complete book-to-audio conversion system
-* **GUI Application**: Desktop interface for easy audiobook creation
-* Runs on CPU only (no GPU required)
-* Small model size, 100M parameters + emotion analysis
-* Audio streaming with emotion-aware parameter control
-* Low latency, ~200ms to first audio chunk
-* Faster than real-time, ~4-6x speed on modern CPUs
-* Uses 1-2 CPU cores optimally
-* Python API, CLI, and GUI interfaces
-* Voice cloning with emotion preservation
-* English text support
-* Resume capability for long-form content
-* Batch processing for multiple files
+- **NVIDIA GPU** with at least 8 GB VRAM (recommended: 12 GB+)
+- **CUDA Toolkit** 12.8+
+- **Python** 3.12 or later
+- **PyTorch** 2.11+ with CUDA support
 
-## Trying it from the website, without installing anything
+## Installation
 
-Navigate to the https://kyutai.org/tts to try basic TTS functionality directly in your browser. You can input text, select different voices, and generate speech without any installation.
+### Windows (Recommended)
 
-## Audiobook Generation Features
-
-# Installation
-
-How to install:
+1. Download and extract the release ZIP
+2. Run `install.bat` - this will:
+   - Set up Python environment
+   - Install PyTorch with CUDA support
+   - Download model weights from HuggingFace
 
 ```bash
-instasll.sh
+install.bat
 ```
 
-**This will download all necessary files.  You will probably need to go to the [kyutai/pocket-tts · Hugging Face](https://huggingface.co/kyutai/pocket-tts) page to accept TOS to download the model.  I suggest going there FIRST before running insta..
+**Important**: You may need to visit [kyutai/pocket-tts · Hugging Face](https://huggingface.co/kyutai/pocket-tts) to accept TOS before downloading the model.
 
-### Desktop GUI Application
-
-Launch the full-featured audiobook generator with emotion analysis:
+### Manual Installation
 
 ```bash
-launch.sh
+# Create virtual environment
+python -m venv python\Scripts
+python\Scripts\pip install --upgrade pip
+
+# Install PyTorch with CUDA
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
+# Install dependencies
+pip install -r requirements_windows.txt
+
+# Download models
+python -c "from huggingface_hub import snapshot_download; snapshot_download('kyutai/pocket-tts')"
 ```
 
-**Features:**
+## Usage
 
-- Drag-and-drop text file selection
-- Real-time emotion preview
-- Customizable chunking and emotion settings
-- Progress tracking with resume capability
-- Voice cloning from audio prompts
-- Batch processing of multiple files
+### Launch GUI
 
-### Smart Text Processing
+```bash
+# Windows
+launch_gui.py
 
-- **Structure Detection**: Automatic chapter, paragraph, and sentence boundary detection
-- **Emotion Analysis**: 6 emotion classes (joy, sadness, anger, fear, surprise, neutral)
-- **Intelligent Chunking**: Configurable word limits with boundary respect
-- **Parameter Mapping**: Emotion-to-TTS parameter conversion for expressive speech
+# Or directly
+python -m pocket_tts
+```
 
-### Configuration System
+### GUI Features
 
-Create custom configurations for different content types:
+#### Generate Audiobook Tab
+- Select text file and voice
+- Configure TTS parameters (temperature, chunking, pauses)
+- Real-time progress tracking
+- Automatic output to `Output/` folder
+
+#### Batch Processing Tab
+- Add multiple text files or entire folders
+- Set different voices per file
+- Overall and per-file progress tracking
+- CPU priority control (default: Below Normal)
+- Pause/Resume/Stop controls
+
+#### Regenerate Chunks Tab
+- Re-generate specific chunks with different settings
+- Search and replace individual sections
+- Quality control and debugging
+
+### GPU Settings
+
+The application automatically detects your GPU and configures:
+
+- **Worker Count**: Calculated based on VRAM (~1.5 GB per worker)
+  - 8 GB VRAM: ~4 workers
+  - 12 GB VRAM: ~6 workers
+  - 16 GB VRAM: ~9 workers
+- **Device Selection**: Auto/CUDA/CPU selector
+- **VRAM Management**: Automatic cleanup between files
+
+### Performance Benchmarks
+
+| GPU | Workers | Speed |
+|-----|---------|-------|
+| RTX 5070 (12 GB) | 6 | 6-8x realtime |
+| RTX 4070 (12 GB) | 6 | 5-7x realtime |
+| RTX 3080 (10 GB) | 5 | 4-6x realtime |
+
+## Configuration
+
+Configuration is stored in `pocket_tts/config/default_config.yaml`:
 
 ```yaml
-# Fiction books - high emotion sensitivity
-emotion:
-  sensitivity: 1.5
-  keyword_boost: 0.3
-chunking:
-  mode: sentence
-  max_words: 80
+tts_core:
+  temperature: 0.8
+  eos_threshold: 0.5
+  frames_after_eos: 30
 
-# Technical docs - neutral, structured
-emotion:
-  sensitivity: 0.7
 chunking:
-  mode: paragraph
-  max_words: 120
+  mode: smart
+  min_words: 35
+  max_words: 175
+
+device:
+  auto: true
+  preferred: cuda
+
+parallel:
+  max_workers: 6
+  enabled: true
 ```
 
-Modify the voice with `--voice` and the text with `--text`. We provide a small catalog of voices.
+## Output Structure
 
-You can take a look at [this page](https://huggingface.co/kyutai/tts-voices) which details the licenses
-for each voice.
+```
+Output/
+  └── <BookTitle>/
+      ├── <filename> [<voice>].wav
+      ├── <filename> [<voice>].m4b  (if M4B enabled)
+      └── TTS/
+          ├── audio_chunks/
+          │   ├── chunk_00000.wav
+          │   └── ...
+          ├── text_chunks/
+          │   ├── chunk_00000.txt
+          │   └── audiobook.chunks.json
+          └── *.debug.log
+```
 
-* [alba](https://huggingface.co/kyutai/tts-voices/blob/main/alba-mackenna/casual.wav)
-* [marius](https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/Selfie.wav)
-* [javert](https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/Butter.wav)
-* [jean](https://huggingface.co/kyutai/tts-voices/blob/main/ears/p010/freeform_speech_01.wav)
-* [fantine](https://huggingface.co/kyutai/tts-voices/blob/main/vctk/p244_023.wav)
-* [cosette](https://huggingface.co/kyutai/tts-voices/blob/main/expresso/ex04-ex02_confused_001_channel1_499s.wav)
-* [eponine](https://huggingface.co/kyutai/tts-voices/blob/main/vctk/p262_023.wav)
-* [azelma](https://huggingface.co/kyutai/tts-voices/blob/main/vctk/p303_023.wav)
+## Voices
 
-The `--voice` argument can also take a plain wav file as input for voice cloning.
-Feel free to check out the [generate documentation](https://github.com/kyutai-labs/pocket-tts/tree/main/docs/generate.md) for more details and examples.
-For trying multiple voices and prompts quickly, prefer using the `serve` command.
+Built-in voices:
+- **alba** - Female, clear and professional
+- **brandon** - Male, deep and authoritative
+- **claire** - Female, warm and friendly
+- **daniel** - Male, neutral and versatile
+- **evan** - Male, young and energetic
+- **freya** - Female, soft and gentle
+- **grant** - Male, mature and distinguished
+- **lauren** - Female, bright and cheerful
 
-## New Features in This Enhanced Version
+Custom voices: Right-click a file in Batch Processing to select a custom WAV file.
 
-✨ **Emotion-Driven Audiobook Generation**
+## Troubleshooting
 
-- AI-powered emotion analysis using DistilRoBERTa
-- Intelligent text chunking with boundary respect
-- Emotion-aware TTS parameter control
-- Complete audiobook pipeline with progress tracking
-- GUI desktop application
-- Resume capability for interrupted generations
-- Custom configuration system
+### Out of Memory
+- Reduce worker count in settings
+- Use shorter text chunks
+- Close other GPU applications
 
-## Supported and Enhanced Features
+### Low Speed
+- Verify CUDA is enabled (check device selector)
+- Update NVIDIA drivers
+- Check GPU utilization in Task Manager
 
-✅ **Core TTS**: All original PocketTTS functionality maintained
-✅ **Emotion Analysis**: 6 emotion classes with configurable sensitivity
-✅ **Smart Chunking**: Sentence/paragraph modes with word limits
-✅ **Voice Cloning**: Enhanced with emotion preservation
-✅ **GUI Interface**: Full desktop application for audiobook creation
-✅ **Batch Processing**: Multiple file processing support
-✅ **Configuration**: YAML-based customization system
-
-## ## Prohibited use
-
-Use of our model and enhanced audiobook generation features must comply with all applicable laws and regulations and must not result in, involve, or facilitate any illegal, harmful, deceptive, fraudulent, or unauthorized activity. Prohibited uses include, without limitation:
-
-- Voice impersonation or cloning without explicit and lawful consent
-- Misinformation, disinformation, or deception (including fake news, fraudulent calls, or presenting generated content as genuine recordings of real people or events)
-- The generation of unlawful, harmful, libelous, abusive, harassing, discriminatory, hateful, or privacy-invasive content
-- Copyright infringement through unauthorized audiobook generation
-- Automated processing of content without proper licensing
-
-**Audiobook Generation Notice**: This enhanced version is designed for personal and lawful audiobook creation. Users are responsible for ensuring they have appropriate rights to convert text content to audio format. Commercial distribution of generated audiobooks may require additional licensing.
-
-We disclaim all liability for any non-compliant use.
+### No Audio Output
+- Verify voice file exists
+- Check output folder permissions
+- Review debug log in output directory
 
 ## License
 
 Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
-Copyright 2024 [Your Name]
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Based on [Kyutai Pocket-TTS](https://github.com/kyutai-labs/pocket-tts).
 
 ## Authors
 
 Manu Orsini*, Simon Rouard*, Gabriel De Marmiesse*, Václav Volhejn, Neil Zeghidour, Alexandre Défossez
 
 *equal contribution
+
+GPU acceleration and batch processing enhancements added for improved performance.
