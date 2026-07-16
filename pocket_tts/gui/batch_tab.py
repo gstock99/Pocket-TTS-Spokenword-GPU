@@ -280,6 +280,10 @@ class BatchGenerationThread(QThread):
 class BatchTab(QWidget):
     """Batch Processing tab for processing multiple audiobook files."""
     
+    # Default paths
+    DEFAULT_TEXT_DIR = "A:\\Pocket TTS-GPU\\ebooks_tts"
+    DEFAULT_VOICE_DIR = "A:\\Pocket TTS-GPU\\sample_voices"
+    
     def __init__(self, config=None, main_window=None):
         super().__init__()
         self.config = config
@@ -476,10 +480,13 @@ class BatchTab(QWidget):
     
     def add_files(self):
         """Add text files to the batch."""
+        # Ensure default directory exists
+        start_dir = self.DEFAULT_TEXT_DIR if os.path.exists(self.DEFAULT_TEXT_DIR) else ""
+        
         files, _ = QFileDialog.getOpenFileNames(
             self,
             "Select Text Files",
-            "",
+            start_dir,
             "Text Files (*.txt);;All Files (*)"
         )
         
@@ -495,10 +502,13 @@ class BatchTab(QWidget):
     
     def add_folder(self):
         """Add all .txt files from a folder recursively."""
+        # Ensure default directory exists
+        start_dir = self.DEFAULT_TEXT_DIR if os.path.exists(self.DEFAULT_TEXT_DIR) else ""
+        
         folder = QFileDialog.getExistingDirectory(
             self,
             "Select Folder",
-            ""
+            start_dir
         )
         
         if folder:
@@ -559,10 +569,13 @@ class BatchTab(QWidget):
     
     def select_custom_voice(self):
         """Select a custom voice WAV file."""
+        # Ensure default directory exists
+        start_dir = self.DEFAULT_VOICE_DIR if os.path.exists(self.DEFAULT_VOICE_DIR) else ""
+        
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Voice WAV File",
-            "",
+            start_dir,
             "WAV Files (*.wav);;All Files (*)"
         )
         
@@ -616,10 +629,13 @@ class BatchTab(QWidget):
     
     def select_file_custom_voice(self, row: int):
         """Select custom voice for a specific file."""
+        # Ensure default directory exists
+        start_dir = self.DEFAULT_VOICE_DIR if os.path.exists(self.DEFAULT_VOICE_DIR) else ""
+        
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Voice WAV File",
-            "",
+            start_dir,
             "WAV Files (*.wav);;All Files (*)"
         )
         
