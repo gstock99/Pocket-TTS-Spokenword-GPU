@@ -1,0 +1,43 @@
+# Output files
+Output/
+
+# Python environment
+python/
+
+# ASR tool
+ASR/
+
+# Ebook source texts (user content)
+ebooks_tts/
+
+# Sample voices (large audio files)
+sample_voices/
+
+# Logs
+*.log
+
+# Test scripts
+test_gpu_gen.py
+
+# Setup markers
+.setup_complete
+
+# Windows installer artifacts
+unins000.*
+Pocket TTS*.lnk
+
+# Byte-compiled
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup*
+*.orig
+*~
+*(copy)

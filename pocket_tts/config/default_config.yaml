@@ -1,0 +1,36 @@
+tts_core:
+  temperature: 0.85
+  eos_threshold: -3.0
+  frames_after_eos: 2
+device:
+  auto: true
+  preferred: cuda
+  max_nb_tokens_in_a_chunk: 50
+chunking:
+  mode: paragraph
+  min_words: 40
+  max_words: 125
+  respect_boundaries: true
+quality:
+  lsd_steps: 4
+pause_injection:
+  enabled: true
+  punctuation_durations:
+    .: 0.0
+    '!': 0.0
+    '?': 0.0
+    ',': 0.0
+    '...': 0.0
+    --: 0.0
+    ;: 0.0
+    ':': 0.0
+speed_variation:
+  enabled: true
+m4b:
+  enabled: false
+  normalization_type: peak
+asr_quality_control:
+  enabled: true
+  threshold: 0.85
+  max_retries: 3
+  temp_decrement: 0.1
