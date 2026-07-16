@@ -155,6 +155,9 @@ class AudiobookGenerator(QMainWindow):
         # Create Regenerate tab (new UI)
         self.create_regenerate_tab()
 
+        # Create Batch Processing tab
+        self.create_batch_tab()
+
         # Status bar
         self.statusBar().showMessage("Ready")
 
@@ -179,6 +182,12 @@ class AudiobookGenerator(QMainWindow):
         from .regenerate_tab import RegenerateTab
         regenerate_tab = RegenerateTab()
         self.tab_widget.addTab(regenerate_tab, "Regenerate Chunks")
+
+    def create_batch_tab(self):
+        """Create the Batch Processing tab."""
+        from .batch_tab import BatchTab
+        batch_tab = BatchTab(config=self.config, main_window=self)
+        self.tab_widget.addTab(batch_tab, "Batch Processing")
 
     def create_header_section(self, parent_layout):
         """Create header section with file selectors and image."""
