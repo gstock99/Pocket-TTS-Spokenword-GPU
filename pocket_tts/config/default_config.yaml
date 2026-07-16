@@ -30,7 +30,7 @@ m4b:
   enabled: false
   normalization_type: peak
 asr_quality_control:
-  enabled: true
+  enabled: false
   threshold: 0.85
   max_retries: 3
   temp_decrement: 0.1
