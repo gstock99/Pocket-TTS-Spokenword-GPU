@@ -367,6 +367,25 @@ class BatchTab(QWidget):
         
         left_layout.addWidget(voice_group)
         
+        # Process Priority
+        priority_group = QGroupBox("CPU Priority")
+        priority_layout = QHBoxLayout(priority_group)
+        
+        priority_layout.addWidget(QLabel("Priority:"))
+        self.priority_combo = QComboBox()
+        self.priority_combo.addItems([
+            "Normal",
+            "Below Normal",
+            "Low",
+            "Above Normal",
+            "High"
+        ])
+        self.priority_combo.setCurrentText("Below Normal")
+        self.priority_combo.setToolTip("Lower priority = less CPU usage, other apps run smoother")
+        priority_layout.addWidget(self.priority_combo)
+        
+        left_layout.addWidget(priority_group)
+        
         splitter.addWidget(left_widget)
         
         # Right side: Progress and controls
@@ -696,7 +715,51 @@ class BatchTab(QWidget):
         
         self.generation_thread.start()
         
+        # Set process priority
+        self._set_process_priority()
+        
         self.log_message("Started batch processing")
+    
+    def _set_process_priority(self):
+        """Set process priority based on user selection."""
+        try:
+            import psutil
+            import platform
+            
+            priority_name = self.priority_combo.currentText()
+            
+            # Map priority names to psutil constants
+            if platform.system() == 'Windows':
+                priority_map = {
+                    "Normal": psutil.NORMAL_PRIORITY_CLASS,
+                    "Below Normal": psutil.BELOW_NORMAL_PRIORITY_CLASS,
+                    "Low": psutil.IDLE_PRIORITY_CLASS,
+                    "Above Normal": psutil.ABOVE_NORMAL_PRIORITY_CLASS,
+                    "High": psutil.HIGH_PRIORITY_CLASS,
+                }
+            else:
+                # Linux/Mac use nice values
+                priority_map = {
+                    "Normal": 0,
+                    "Below Normal": 10,
+                    "Low": 19,
+                    "Above Normal": -10,
+                    "High": -20,
+                }
+            
+            process = psutil.Process()
+            
+            if platform.system() == 'Windows':
+                process.nice(priority_map.get(priority_name, psutil.NORMAL_PRIORITY_CLASS))
+            else:
+                os.nice(priority_map.get(priority_name, 0))
+            
+            self.log_message(f"Set process priority to: {priority_name}")
+        
+        except ImportError:
+            self.log_message("Warning: psutil not available, cannot set priority")
+        except Exception as e:
+            self.log_message(f"Warning: Could not set priority: {e}")
     
     def _get_parameters_from_main_window(self, voice_path: str) -> dict:
         """Get parameters from main window's Generate tab."""
