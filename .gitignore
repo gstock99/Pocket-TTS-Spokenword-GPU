@@ -47,3 +47,7 @@ Pocket TTS/
 
 # Release archives
 *.zip
+*.exe
+*.iss
+*.tmp
+installer_output/
