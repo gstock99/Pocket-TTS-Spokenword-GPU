@@ -36,15 +36,15 @@ Supports Python 3.12+ and requires NVIDIA GPU with CUDA support.
    - Install PyTorch with CUDA support
    - Download model weights from HuggingFace
 
-```bash
+bash
 install.bat
-```
+
 
 **Important**: You may need to visit [kyutai/pocket-tts · Hugging Face](https://huggingface.co/kyutai/pocket-tts) to accept TOS before downloading the model.
 
 ### Manual Installation
 
-```bash
+bash
 # Create virtual environment
 python -m venv python\Scripts
 python\Scripts\pip install --upgrade pip
@@ -57,11 +57,11 @@ pip install -r requirements_windows.txt
 
 # Download models
 python -c "from huggingface_hub import snapshot_download; snapshot_download('kyutai/pocket-tts')"
-```
+
 
 ### Linux Installation
 
-```bash
+bash
 # Clone repository
 git clone https://github.com/gstock99/Pocket-TTS-Spokenword-GPU.git
 cd Pocket-TTS-Spokenword-GPU
@@ -81,13 +81,13 @@ pip install -r requirements_windows.txt
 
 # Download AI models
 python -c "from huggingface_hub import snapshot_download; snapshot_download('kyutai/pocket-tts')"
-```
+
 
 **Note:** The `requirements_windows.txt` file works for Linux as well - the name is just a leftover from the original project.
 
 ### Launch GUI
 
-```bash
+bash
 # Windows
 launch_gui.py
 
@@ -96,7 +96,7 @@ python launch_gui.py
 
 # Linux
 python launch_gui.py
-```
+
 
 ### GUI Features
 
@@ -141,7 +141,7 @@ The application automatically detects your GPU and configures:
 
 Configuration is stored in `pocket_tts/config/default_config.yaml`:
 
-```yaml
+yaml
 tts_core:
   temperature: 0.8
   eos_threshold: 0.5
@@ -159,11 +159,11 @@ device:
 parallel:
   max_workers: 6
   enabled: true
-```
+
 
 ## Output Structure
 
-```
+
 Output/
   └── <BookTitle>/
       ├── <filename> [<voice>].wav
@@ -176,7 +176,7 @@ Output/
           │   ├── chunk_00000.txt
           │   └── audiobook.chunks.json
           └── *.debug.log
-```
+
 
 ## Voices
 
