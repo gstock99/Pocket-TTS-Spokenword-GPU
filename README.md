@@ -133,8 +133,8 @@ The application automatically detects your GPU and configures:
 
 | GPU | Workers | Speed |
 |-----|---------|-------|
-| RTX 5070 (12 GB) | 6 | 6-8x realtime |
-| RTX 4070 (12 GB) | 6 | 5-7x realtime |
+| RTX 5070 (12 GB) | 6 | 8-9x realtime |
+| RTX 4070 (12 GB) | 6 | 6-8x realtime |
 | RTX 3080 (10 GB) | 5 | 4-6x realtime |
 
 ## Configuration
