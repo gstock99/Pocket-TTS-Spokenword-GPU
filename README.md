@@ -68,7 +68,7 @@ python -c "from huggingface_hub import snapshot_download; snapshot_download('kyu
 launch_gui.py
 
 # Or directly
-python -m pocket_tts
+python launch_gui.py
 ```
 
 ### GUI Features
