@@ -50,4 +50,5 @@ Pocket TTS/
 *.exe
 *.iss
 *.tmp
+*.md2
 installer_output/
