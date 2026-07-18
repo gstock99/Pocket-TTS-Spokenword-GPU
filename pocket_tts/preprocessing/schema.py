@@ -179,6 +179,9 @@ class Config:
     # Quality settings
     quality: Dict[str, Any] = field(default_factory=dict)
 
+    # Audio output settings
+    bit_depth: str = 'int16'  # "int16" or "float32"
+
     # Pause injection settings
     pause_injection: Dict[str, Any] = field(default_factory=dict)
 

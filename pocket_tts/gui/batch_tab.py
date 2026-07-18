@@ -237,6 +237,7 @@ class BatchGenerationThread(QThread):
         generator = AudiobookGenerator(config=self.config)
         generator._pause_injection_enabled = pi_enabled
         generator._pause_durations = self.params.get('pause_durations', {})
+        generator.bit_depth = self.config.quality.get('bit_depth', 'int16')
         
         # Generate output path
         dataset_paths = AudiobookGenerator.generate_output_paths(batch_file.file_path, voice_path)
@@ -829,6 +830,11 @@ class BatchTab(QWidget):
             self.config.asr_quality_control['threshold'] = self.main_window.asr_threshold_spin.value()
             self.config.asr_quality_control['max_retries'] = self.main_window.asr_max_retries_spin.value()
             self.config.asr_quality_control['temp_decrement'] = self.main_window.asr_temp_decrement_spin.value()
+            
+            # Update config with quality/bit_depth settings
+            if not hasattr(self.config, 'quality') or not isinstance(self.config.quality, dict):
+                self.config.quality = {}
+            self.config.quality['bit_depth'] = self.main_window.bit_depth_combo.currentText()
         
         else:
             # Use default parameters if main window not available

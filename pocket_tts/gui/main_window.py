@@ -106,6 +106,7 @@ class AudiobookGenerator(QMainWindow):
                 },
                 'quality': {
                     'lsd_steps': self.lsd_steps_spin.value(),
+                    'bit_depth': self.bit_depth_combo.currentText(),
                 },
                 'pause_injection': {
                     'enabled': self.pause_injection_check.isChecked(),
@@ -181,6 +182,7 @@ class AudiobookGenerator(QMainWindow):
         """Create the Regenerate Chunks tab (new UI)."""
         from .regenerate_tab import RegenerateTab
         regenerate_tab = RegenerateTab()
+        regenerate_tab.bit_depth = self.config.quality.get('bit_depth', 'int16')
         self.tab_widget.addTab(regenerate_tab, "Regenerate Chunks")
 
     def create_batch_tab(self):
@@ -374,6 +376,12 @@ class AudiobookGenerator(QMainWindow):
         lsd_note = QLabel("(5-10 optimal for quality vs speed)")
         lsd_note.setStyleSheet("font-size: 10px; color: gray;")
         quality_layout.addRow("", lsd_note)
+
+        self.bit_depth_combo = QComboBox()
+        self.bit_depth_combo.addItems(["int16", "float32"])
+        self.bit_depth_combo.setCurrentText(self.config.quality.get('bit_depth', 'int16'))
+        self.bit_depth_combo.setToolTip("int16: smaller files, good quality\nfloat32: 2x larger, lossless for editing")
+        quality_layout.addRow("Bit Depth:", self.bit_depth_combo)
 
         self.speed_variation_check = QCheckBox("Enable speed variation")
         self.speed_variation_check.setChecked(True)
@@ -791,6 +799,11 @@ class AudiobookGenerator(QMainWindow):
         self.config.asr_quality_control['max_retries'] = self.asr_max_retries_spin.value()
         self.config.asr_quality_control['temp_decrement'] = self.asr_temp_decrement_spin.value()
 
+        # Update config with quality/bit_depth settings
+        if not hasattr(self.config, 'quality') or not isinstance(self.config.quality, dict):
+            self.config.quality = {}
+        self.config.quality['bit_depth'] = self.bit_depth_combo.currentText()
+
         # Update config with device settings
         if not hasattr(self.config, 'device') or not isinstance(self.config.device, dict):
             self.config.device = {}
@@ -1102,6 +1115,9 @@ class GenerationThread(QThread):
             # Use the modified config
             print(f"DEBUG: Creating AudiobookGenerator with config parallel.max_workers={self.config.parallel.get('max_workers', 'not found')}")
             self.generator = AudiobookGeneratorEngine(config=self.config)
+            
+            # Set bit_depth from config
+            self.generator.bit_depth = self.config.quality.get('bit_depth', 'int16')
 
             # Set pause injection parameters on the generator
             self.generator._pause_injection_enabled = self.params.get('pause_injection_enabled', False)

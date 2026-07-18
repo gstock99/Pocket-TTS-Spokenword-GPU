@@ -13,6 +13,7 @@ chunking:
   respect_boundaries: true
 quality:
   lsd_steps: 4
+  bit_depth: int16  # "int16" or "float32" - WAV output format
 pause_injection:
   enabled: true
   punctuation_durations:

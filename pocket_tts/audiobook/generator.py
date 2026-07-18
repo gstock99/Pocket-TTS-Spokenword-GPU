@@ -105,6 +105,13 @@ class AudiobookGenerator:
         else:
             self._device = 'auto'
 
+        # Bit depth for WAV output (int16 or float32)
+        quality_config = getattr(self.config, 'quality', {})
+        if isinstance(quality_config, dict):
+            self.bit_depth = quality_config.get('bit_depth', 'int16')
+        else:
+            self.bit_depth = 'int16'
+
         # Load parallel processing configuration
         parallel_config = getattr(self.config, 'parallel', {})
         self.parallel_enabled = parallel_config.get('enabled', True)
@@ -822,7 +829,7 @@ class AudiobookGenerator:
                 target=_queue_worker,
                 args=(chunk_queue, voice_path, output_dir_str, result_queue, worker_id,
                       self._pause_injection_enabled, self._pause_durations,
-                      self._device)
+                      self._device, self.bit_depth)
             )
             worker.daemon = True
             worker.start()
@@ -1020,9 +1027,17 @@ class AudiobookGenerator:
             # Convert to numpy and ensure proper format for WAV
             sample_rate = getattr(self.tts_model, 'sample_rate', 24000)
             audio_np = audio.cpu().numpy().clip(-1.0, 1.0)
-            audio_int16 = (np.array(audio_np) * 32767).astype(np.int16)
-            scipy.io.wavfile.write(output_path, sample_rate, audio_int16)
-            logger.info(f"Audio saved to {output_path}")
+            
+            # Get bit_depth from config (default to int16)
+            bit_depth = getattr(self, 'bit_depth', 'int16')
+            
+            if bit_depth == 'float32':
+                audio_out = np.array(audio_np).astype(np.float32)
+            else:
+                audio_out = (np.array(audio_np) * 32767).astype(np.int16)
+            
+            scipy.io.wavfile.write(output_path, sample_rate, audio_out)
+            logger.info(f"Audio saved to {output_path} ({bit_depth})")
         except Exception as e:
             logger.error(f"Failed to save audio: {e}")
             raise
@@ -1625,7 +1640,7 @@ def _ffmpeg_atempo_standalone(tts_model, audio, speed_factor: float):
 # Dynamic queue-based worker for parallel processing
 def _queue_worker(chunk_queue: Any, voice_path: str, output_dir: str, result_queue: Any, worker_id: int,
                   pause_injection_enabled: bool = False, pause_durations: Dict[str, float] = None,
-                  device: str = "auto"):
+                  device: str = "auto", bit_depth: str = "int16"):
     """
     Worker process with model pooling - loads TTS model and voice once, processes multiple chunks.
     Eliminates model/voice reload overhead for subsequent chunks in the same worker.
@@ -1774,8 +1789,15 @@ def _queue_worker(chunk_queue: Any, voice_path: str, output_dir: str, result_que
                 import numpy as _np
                 sample_rate = getattr(tts_model, 'sample_rate', 24000)
                 audio_np = audio.cpu().numpy().clip(-1.0, 1.0)
-                audio_int16 = (_np.array(audio_np) * 32767).astype(_np.int16)
-                scipy.io.wavfile.write(str(chunk_path), sample_rate, audio_int16)
+                
+                # bit_depth passed as parameter from caller
+                
+                if bit_depth == 'float32':
+                    audio_out = _np.array(audio_np).astype(_np.float32)
+                else:
+                    audio_out = (_np.array(audio_np) * 32767).astype(_np.int16)
+                
+                scipy.io.wavfile.write(str(chunk_path), sample_rate, audio_out)
 
                 # SAVE TEXT FILE FOR ASR VALIDATION
                 text_chunks_dir = Path(output_dir).parent / "text_chunks"

@@ -41,6 +41,7 @@ class RegenerateTab(QWidget):
         self.tts_model = None
         self.emotion_analyzer = None
         self.fail_info = {}  # Dict[str, fail_data] for chunks from fail.log
+        self.bit_depth = 'int16'  # Default to 16-bit, set from main_window
 
         self.init_ui()
 
@@ -881,15 +882,21 @@ class RegenerateTab(QWidget):
 
         sample_rate = 24000
 
-        # Convert to int16 PCM
+        # Convert to numpy
         if isinstance(audio_tensor, torch.Tensor):
             audio_np = audio_tensor.cpu().numpy()
         else:
             audio_np = audio_tensor
 
-        audio_int16 = (audio_np.clip(-1, 1) * 32767).astype('int16')
+        # Get bit_depth from config (default to int16)
+        bit_depth = getattr(self, 'bit_depth', 'int16')
+        
+        if bit_depth == 'float32':
+            audio_out = audio_np.clip(-1, 1).astype('float32')
+        else:
+            audio_out = (audio_np.clip(-1, 1) * 32767).astype('int16')
 
-        scipy.io.wavfile.write(str(output_path), sample_rate, audio_int16)
+        scipy.io.wavfile.write(str(output_path), sample_rate, audio_out)
 
     # Save functionality
 

@@ -177,7 +177,8 @@ class ConfigManager:
 
         # QUALITY SETTINGS
         'quality': {
-            'lsd_steps': 2  # Lagrangian Self Distillation steps (1-30; 5-10 optimal)
+            'lsd_steps': 2,  # Lagrangian Self Distillation steps (1-30; 5-10 optimal)
+            'bit_depth': 'int16'  # "int16" or "float32" - WAV output format
         }
     }
 
