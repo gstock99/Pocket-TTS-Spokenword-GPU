@@ -135,6 +135,14 @@ class BatchGenerationThread(QThread):
                 batch_file.error_message = str(e)
                 failed += 1
                 self.file_failed.emit(batch_file.file_path, str(e))
+            
+            # Clear VRAM between files (natural transition point)
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except ImportError:
+                pass
         
         # Final results
         total_time = time.time() - start_time

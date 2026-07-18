@@ -1054,7 +1054,6 @@ class AudiobookGenerator:
         """
         import subprocess
         import tempfile
-        import torch
         import numpy as np
         import scipy.io.wavfile
         from ..data.audio import audio_read
@@ -1065,13 +1064,9 @@ class AudiobookGenerator:
             input_wav = os.path.join(tmpdir, "input.wav")
             output_wav = os.path.join(tmpdir, "output.wav")
 
-            # Save audio to temp WAV (float32 format)
             audio_np = audio.cpu().numpy()
             scipy.io.wavfile.write(input_wav, sample_rate, audio_np.astype(np.float32))
 
-            # Run ffmpeg with atempo filter. POCKET_TTS_FFMPEG_PATH is set by
-            # the Windows launcher when a private (non-PATH) copy was
-            # downloaded, since ffmpeg is never bundled or on PATH by default.
             cmd = [
                 os.environ.get("POCKET_TTS_FFMPEG_PATH", "ffmpeg"),
                 "-y", "-i", input_wav,
@@ -1085,16 +1080,12 @@ class AudiobookGenerator:
             )
             if result.returncode != 0:
                 logger.warning(f"ffmpeg atempo failed: {result.stderr}")
-                return audio  # Return original on failure
+                return audio
 
-            # Read result back (audio_read returns torch.Tensor, not numpy)
             stretched, _ = audio_read(output_wav)
             stretched = stretched.squeeze().to(audio.device)
 
         return stretched
-
-
-
     def _concatenate_from_files(self, chunk_paths: List[Path], output_path: Union[str, Path]):
         """Concatenate saved WAV files into final audiobook."""
 
@@ -1597,7 +1588,6 @@ def _ffmpeg_atempo_standalone(tts_model, audio, speed_factor: float):
     """
     import subprocess
     import tempfile
-    import torch
     import numpy as np
     import scipy.io.wavfile
     from ..data.audio import audio_read
@@ -1608,13 +1598,9 @@ def _ffmpeg_atempo_standalone(tts_model, audio, speed_factor: float):
         input_wav = os.path.join(tmpdir, "input.wav")
         output_wav = os.path.join(tmpdir, "output.wav")
 
-        # Save audio to temp WAV (float32 format)
         audio_np = audio.cpu().numpy()
         scipy.io.wavfile.write(input_wav, sample_rate, audio_np.astype(np.float32))
 
-        # Run ffmpeg with atempo filter. POCKET_TTS_FFMPEG_PATH is set by
-        # the Windows launcher when a private (non-PATH) copy was
-        # downloaded, since ffmpeg is never bundled or on PATH by default.
         cmd = [
             os.environ.get("POCKET_TTS_FFMPEG_PATH", "ffmpeg"),
             "-y", "-i", input_wav,
@@ -1628,9 +1614,8 @@ def _ffmpeg_atempo_standalone(tts_model, audio, speed_factor: float):
         )
         if result.returncode != 0:
             logger.warning(f"ffmpeg atempo failed: {result.stderr}")
-            return audio  # Return original on failure
+            return audio
 
-        # Read result back (audio_read returns torch.Tensor, not numpy)
         stretched, _ = audio_read(output_wav)
         stretched = stretched.squeeze().to(audio.device)
 
@@ -1818,9 +1803,9 @@ def _queue_worker(chunk_queue: Any, voice_path: str, output_dir: str, result_que
 
                 result_queue.put((str(chunk_path), global_index, chunk.text[:50]))
 
-                # CLEANUP (no per-chunk GC as requested in testing)
+                # CLEANUP — clear VRAM every 50 chunks
                 del audio
-                if 'torch' in globals():
+                if 'torch' in globals() and chunks_processed % 50 == 0 and chunks_processed > 0:
                     import torch
                     torch.cuda.empty_cache()
 
