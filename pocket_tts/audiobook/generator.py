@@ -180,6 +180,19 @@ class AudiobookGenerator:
             if load_avg > self.load_threshold:
                 return False, f"System load {load_avg:.1f} exceeds threshold {self.load_threshold}"
 
+            # Check VRAM usage (GPU mode only)
+            if self._device in ('cuda', 'auto'):
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        vram_used = torch.cuda.memory_allocated() / (1024**3)
+                        vram_total = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                        vram_percent = (vram_used / vram_total) * 100
+                        if vram_percent > 90:
+                            return False, f"VRAM usage {vram_percent:.1f}% ({vram_used:.1f}/{vram_total:.1f} GB) exceeds 90% limit"
+                except Exception:
+                    pass  # VRAM check is best-effort
+
             return True, ""
 
         except Exception as e:
