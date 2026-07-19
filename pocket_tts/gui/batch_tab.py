@@ -468,6 +468,17 @@ class BatchTab(QWidget):
         
         right_layout.addLayout(controls_layout)
         
+        # Purge TTS Folders
+        purge_layout = QHBoxLayout()
+        
+        self.purge_btn = QPushButton("Purge TTS Folders")
+        self.purge_btn.clicked.connect(self.purge_tts_folders)
+        self.purge_btn.setToolTip("Delete all audio_chunks and text_chunks subfolders from Output/")
+        self.purge_btn.setStyleSheet("QPushButton { background-color: #ff9800; color: white; font-weight: bold; padding: 8px 16px; }")
+        purge_layout.addWidget(self.purge_btn)
+        
+        right_layout.addLayout(purge_layout)
+        
         # Log
         log_group = QGroupBox("Log")
         log_layout = QVBoxLayout(log_group)
@@ -557,6 +568,48 @@ class BatchTab(QWidget):
                 self.batch_files.clear()
                 self._update_list_widget()
                 self.log_message("Cleared all files")
+    
+    def purge_tts_folders(self):
+        """Delete entire TTS folders from Output/ (chunks + cloned voice), preserving final WAV files."""
+        import shutil
+
+        output_dir = Path("Output")
+        if not output_dir.exists():
+            QMessageBox.information(self, "Purge", "No Output folder found.")
+            return
+
+        # Find all TTS subfolders
+        tts_dirs = list(output_dir.glob("*/TTS"))
+        if not tts_dirs:
+            QMessageBox.information(self, "Purge", "No TTS folders found to purge.")
+            return
+
+        # Count what will be deleted
+        total_files = 0
+        total_size = 0
+        for tts_dir in tts_dirs:
+            for f in tts_dir.rglob("*"):
+                if f.is_file():
+                    total_files += 1
+                    total_size += f.stat().st_size
+
+        size_mb = total_size / (1024 * 1024)
+        reply = QMessageBox.question(
+            self,
+            "Purge TTS Folders",
+            f"Delete {total_files} files ({size_mb:.1f} MB) from {len(tts_dirs)} TTS folder(s)?\n\n"
+            f"This removes chunks and cloned voices.\n"
+            f"Final WAV files will be preserved.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            for tts_dir in tts_dirs:
+                shutil.rmtree(tts_dir)
+                self.log_message(f"Deleted: {tts_dir}")
+
+            self.log_message(f"Purge complete: {len(tts_dirs)} TTS folders removed ({size_mb:.1f} MB freed)")
     
     def move_up(self):
         """Move selected file up in the list."""
