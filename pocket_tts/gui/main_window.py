@@ -16,10 +16,11 @@ from qtpy.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QProgressBar, QFileDialog, QComboBox,
     QGroupBox, QFormLayout, QSpinBox, QDoubleSpinBox, QTextEdit,
-    QCheckBox, QMessageBox, QSizePolicy, QTabWidget
+    QCheckBox, QMessageBox, QSizePolicy, QTabWidget,
+    QSystemTrayIcon, QMenu, QAction
 )
 from qtpy.QtCore import Qt, QThread, Signal
-from qtpy.QtGui import QPalette, QColor, QPixmap
+from qtpy.QtGui import QPalette, QColor, QPixmap, QIcon
 
 from pocket_tts.preprocessing.structure_detector import StructureDetector
 from pocket_tts.preprocessing.chunker import SmartChunker
@@ -138,6 +139,18 @@ class AudiobookGenerator(QMainWindow):
         """Initialize the user interface."""
         self.setWindowTitle("Audiobook Generator")
         self.setGeometry(100, 100, 1200, 800)
+
+        # System tray icon
+        icon_path = Path(__file__).parent.parent.parent / "docs" / "icon.png"
+        self.tray_icon = QSystemTrayIcon(QIcon(str(icon_path)) if icon_path.exists() else QIcon(), self)
+        tray_menu = QMenu()
+        show_action = tray_menu.addAction("Show")
+        show_action.triggered.connect(self._tray_show)
+        quit_action = tray_menu.addAction("Quit")
+        quit_action.triggered.connect(self._tray_quit)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self._tray_activated)
+        self.tray_icon.setToolTip("Pocket TTS - Audiobook Generator")
 
         # Create central widget with tabs
         central_widget = QWidget()
@@ -1058,6 +1071,32 @@ class AudiobookGenerator(QMainWindow):
         except Exception as e:
             QMessageBox.warning(self, "Playback Error",
                 f"Could not play audio: {str(e)}")
+
+    def closeEvent(self, event):
+        """Override close to minimize to tray instead of quitting."""
+        event.ignore()
+        self.hide()
+        self.tray_icon.show()
+        self.tray_icon.showMessage(
+            "Pocket TTS",
+            "Minimized to system tray. Right-click to restore or quit.",
+            QSystemTrayIcon.Information,
+            2000
+        )
+
+    def _tray_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self._tray_show()
+
+    def _tray_show(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.tray_icon.hide()
+
+    def _tray_quit(self):
+        self.tray_icon.hide()
+        QApplication.quit()
 
 
 class GenerationThread(QThread):
