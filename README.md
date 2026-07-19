@@ -1,10 +1,10 @@
-# Pocket-TTS GPU
+# Pocket-TTS-Spokenword GPU
 
 # GPU-Accelerated Emotion-Driven Audiobook Generator
 
 <img width="1446" height="622" alt="pocket-tts-logo-v2-transparent" src="https://github.com/user-attachments/assets/637b5ed6-831f-4023-9b4c-741be21ab238" />
 
-A GPU-accelerated version of Kyutai's Pocket TTS that transforms plain text into emotionally expressive audiobooks. Uses NVIDIA CUDA for significantly faster generation with parallel processing.
+A GPU-accelerated version of Pocket-TTS-Spokenword-Danneausx / Kyutai's Pocket TTS releases that transforms plain text into emotionally expressive audiobooks. Uses NVIDIA CUDA for significantly faster generation with parallel processing.
 
 **✨ Key Features:**
 
