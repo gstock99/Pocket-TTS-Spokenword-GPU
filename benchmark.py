@@ -14,6 +14,39 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import torch
 torch.set_float32_matmul_precision("high")
 
+BENCHMARK_TEXTS = [
+    "The quick brown fox jumps over the lazy dog near the river bank.",
+    "In the distance, the mountains rose like ancient sentinels against the darkening sky.",
+    "She opened the old leather journal and began to write about everything she had witnessed that day.",
+    "The laboratory equipment hummed quietly as the scientist prepared the next phase of the experiment.",
+    "Wind swept through the valley carrying the scent of pine and distant rain across the open meadow.",
+    "Scientists discovered a new species of deep-sea fish living near hydrothermal vents at unprecedented depths.",
+    "The old library smelled of aged paper and leather bindings, a scent that transported visitors to another era.",
+    "Rain drummed steadily against the windowpane while she read aloud from the worn copy of her favorite novel.",
+]
+
+
+def _worker_fn(worker_id, num_chunks, result_dict):
+    import torch
+    torch.set_float32_matmul_precision("high")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from pocket_tts.models.tts_model import TTSModel
+
+    model = TTSModel.load_model(device="auto")
+    voice = model.get_state_for_audio_prompt("alba", truncate=True)
+
+    texts = [BENCHMARK_TEXTS[(worker_id * num_chunks + i) % len(BENCHMARK_TEXTS)] for i in range(num_chunks)]
+
+    durs = []
+    start = time.time()
+    for t in texts:
+        cs = time.time()
+        audio = model.generate_audio(voice, t, frames_after_eos=2)
+        ce = time.time()
+        dur = audio.shape[-1] / model.sample_rate
+        durs.append((ce - cs, dur))
+    result_dict[worker_id] = durs
+
 
 def benchmark_single_worker():
     """Benchmark single worker GPU throughput."""
@@ -37,20 +70,9 @@ def benchmark_single_worker():
     # Warmup
     model.generate_audio(voice, "Warmup.", frames_after_eos=2)
 
-    texts = [
-        "The quick brown fox jumps over the lazy dog near the river bank.",
-        "In the distance, the mountains rose like ancient sentinels against the darkening sky.",
-        "She opened the old leather journal and began to write about everything she had witnessed that day.",
-        "The laboratory equipment hummed quietly as the scientist prepared the next phase of the experiment.",
-        "Wind swept through the valley carrying the scent of pine and distant rain across the open meadow.",
-        "Scientists discovered a new species of deep-sea fish living near hydrothermal vents at unprecedented depths.",
-        "The old library smelled of aged paper and leather bindings, a scent that transported visitors to another era.",
-        "Rain drummed steadily against the windowpane while she read aloud from the worn copy of her favorite novel.",
-    ]
-
     durs = []
     start = time.time()
-    for i, t in enumerate(texts):
+    for i, t in enumerate(BENCHMARK_TEXTS):
         cs = time.time()
         audio = model.generate_audio(voice, t, frames_after_eos=2)
         ce = time.time()
@@ -73,38 +95,6 @@ def benchmark_multi_worker(num_workers=6):
     print(f"MULTI-WORKER BENCHMARK ({num_workers} workers)")
     print("=" * 60)
 
-    TEXTS = [
-        "The quick brown fox jumps over the lazy dog near the river bank.",
-        "In the distance, the mountains rose like ancient sentinels against the darkening sky.",
-        "She opened the old leather journal and began to write about everything she had witnessed that day.",
-        "The laboratory equipment hummed quietly as the scientist prepared the next phase of the experiment.",
-        "Wind swept through the valley carrying the scent of pine and distant rain across the open meadow.",
-        "Scientists discovered a new species of deep-sea fish living near hydrothermal vents at unprecedented depths.",
-        "The old library smelled of aged paper and leather bindings, a scent that transported visitors to another era.",
-        "Rain drummed steadily against the windowpane while she read aloud from the worn copy of her favorite novel.",
-    ]
-
-    def worker_fn(worker_id, num_chunks, result_dict):
-        import torch
-        torch.set_float32_matmul_precision("high")
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from pocket_tts.models.tts_model import TTSModel
-
-        model = TTSModel.load_model(device="auto")
-        voice = model.get_state_for_audio_prompt("alba", truncate=True)
-
-        texts = [TEXTS[(worker_id * num_chunks + i) % len(TEXTS)] for i in range(num_chunks)]
-
-        durs = []
-        start = time.time()
-        for t in texts:
-            cs = time.time()
-            audio = model.generate_audio(voice, t, frames_after_eos=2)
-            ce = time.time()
-            dur = audio.shape[-1] / model.sample_rate
-            durs.append((ce - cs, dur))
-        result_dict[worker_id] = durs
-
     manager = Manager()
     result_dict = manager.dict()
     chunks_per_worker = 2
@@ -112,7 +102,7 @@ def benchmark_multi_worker(num_workers=6):
     start = time.time()
     procs = []
     for i in range(num_workers):
-        p = Process(target=worker_fn, args=(i, chunks_per_worker, result_dict))
+        p = Process(target=_worker_fn, args=(i, chunks_per_worker, result_dict))
         p.start()
         procs.append(p)
 
