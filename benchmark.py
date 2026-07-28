@@ -94,12 +94,13 @@ def benchmark_single_worker():
 
 def benchmark_multi_worker(num_workers=6):
     """Benchmark multi-worker GPU throughput."""
-    from multiprocessing import Process, Manager
+    from multiprocessing import Manager
 
     print("\n" + "=" * 60)
     print(f"MULTI-WORKER BENCHMARK ({num_workers} workers)")
     print("=" * 60)
 
+    spawn_ctx = _mp.get_context('spawn')
     manager = Manager()
     result_dict = manager.dict()
     chunks_per_worker = 8
@@ -107,7 +108,7 @@ def benchmark_multi_worker(num_workers=6):
     start = time.time()
     procs = []
     for i in range(num_workers):
-        p = Process(target=_worker_fn, args=(i, chunks_per_worker, result_dict))
+        p = spawn_ctx.Process(target=_worker_fn, args=(i, chunks_per_worker, result_dict))
         p.start()
         procs.append(p)
 
