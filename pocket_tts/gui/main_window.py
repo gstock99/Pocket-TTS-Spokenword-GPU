@@ -141,6 +141,7 @@ class AudiobookGenerator(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
 
         # System tray icon
+        self.minimize_to_tray = True
         icon_path = Path(__file__).parent.parent.parent / "docs" / "icon.png"
         self.tray_icon = QSystemTrayIcon(QIcon(str(icon_path)) if icon_path.exists() else QIcon(), self)
         tray_menu = QMenu()
@@ -505,6 +506,21 @@ class AudiobookGenerator(QMainWindow):
         self.max_workers_spin.setToolTip(tooltip_text)
         performance_layout.addRow("Max Workers:", self.max_workers_spin)
 
+        self.ram_limit_spin = QSpinBox()
+        self.ram_limit_spin.setRange(50, 100)
+        self.ram_limit_spin.setValue(85)
+        self.ram_limit_spin.setSuffix("%")
+        self.ram_limit_spin.setToolTip("Pause generation if system RAM usage exceeds this percentage")
+        performance_layout.addRow("RAM Limit:", self.ram_limit_spin)
+
+        self.load_threshold_spin = QDoubleSpinBox()
+        self.load_threshold_spin.setRange(1.0, 16.0)
+        self.load_threshold_spin.setValue(8.0)
+        self.load_threshold_spin.setSingleStep(0.5)
+        self.load_threshold_spin.setDecimals(1)
+        self.load_threshold_spin.setToolTip("Pause generation if system load average exceeds this value\n(Normal = number of CPU cores)")
+        performance_layout.addRow("Load Threshold:", self.load_threshold_spin)
+
         # Store original config value for reset reference
         self.original_max_workers = self.config.parallel.get('max_workers', 4)
 
@@ -822,6 +838,12 @@ class AudiobookGenerator(QMainWindow):
             self.config.device = {}
         self.config.device['preferred'] = self.device_combo.currentText()
 
+        # Update config with resource limits
+        if not hasattr(self.config, 'parallel') or not isinstance(self.config.parallel, dict):
+            self.config.parallel = {}
+        self.config.parallel['ram_limit_percent'] = self.ram_limit_spin.value()
+        self.config.parallel['load_threshold'] = self.load_threshold_spin.value()
+
         # Update UI
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
@@ -1074,6 +1096,9 @@ class AudiobookGenerator(QMainWindow):
 
     def closeEvent(self, event):
         """Override close to minimize to tray instead of quitting."""
+        if not self.minimize_to_tray:
+            event.accept()
+            return
         event.ignore()
         self.hide()
         self.tray_icon.show()

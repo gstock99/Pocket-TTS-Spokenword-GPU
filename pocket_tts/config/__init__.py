@@ -74,12 +74,12 @@ class ConfigManager:
         # PAUSE DURATIONS - Used in: ParameterMapper.calculate_pause()
         'pauses': {
             'base_durations': {
-                'sentence_end': 160,      # ms
-                'paragraph_break': 320,   # ms
+                'sentence_end': 200,      # ms
+                'paragraph_break': 400,   # ms
                 'chapter_start': 800,     # ms
                 'question_mark': 240,     # ms
-                'exclamation': 80,        # ms
-                'ellipsis': 320           # ms
+                'exclamation': 120,        # ms
+                'ellipsis': 240           # ms
             },
             'emotion_multipliers': {
                 'anger': 1.3,     # Angry pauses are 30% longer

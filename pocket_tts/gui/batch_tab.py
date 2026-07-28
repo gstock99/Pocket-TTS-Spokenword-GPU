@@ -246,6 +246,8 @@ class BatchGenerationThread(QThread):
         generator._pause_injection_enabled = pi_enabled
         generator._pause_durations = self.params.get('pause_durations', {})
         generator.bit_depth = self.config.quality.get('bit_depth', 'int16')
+        generator.ram_limit_percent = self.params.get('ram_limit_percent', 85)
+        generator.load_threshold = self.params.get('load_threshold', 8.0)
         
         # Generate output path
         dataset_paths = AudiobookGenerator.generate_output_paths(batch_file.file_path, voice_path)
@@ -398,6 +400,16 @@ class BatchTab(QWidget):
         priority_layout.addWidget(self.priority_combo)
         
         left_layout.addWidget(priority_group)
+
+        # Minimize to Tray
+        tray_group = QGroupBox("Window Behavior")
+        tray_layout = QHBoxLayout(tray_group)
+        self.tray_checkbox = QCheckBox("Minimize to system tray on close")
+        self.tray_checkbox.setChecked(True)
+        self.tray_checkbox.setToolTip("When enabled, closing the window minimizes to the system tray instead of quitting")
+        self.tray_checkbox.toggled.connect(self._on_tray_toggled)
+        tray_layout.addWidget(self.tray_checkbox)
+        left_layout.addWidget(tray_group)
         
         splitter.addWidget(left_widget)
         
@@ -629,6 +641,11 @@ class BatchTab(QWidget):
             self._update_list_widget()
             self.file_list_widget.setCurrentRow(selected + 1)
     
+    def _on_tray_toggled(self, checked):
+        """Toggle minimize to tray on the main window."""
+        if self.main_window:
+            self.main_window.minimize_to_tray = checked
+
     def select_custom_voice(self):
         """Select a custom voice WAV file."""
         # Ensure default directory exists
@@ -756,6 +773,11 @@ class BatchTab(QWidget):
         
         # Get parameters from main window if available
         params = self._get_parameters_from_main_window(voice_path)
+
+        # Resource limits from Generate tab
+        if self.main_window:
+            params['ram_limit_percent'] = self.main_window.ram_limit_spin.value()
+            params['load_threshold'] = self.main_window.load_threshold_spin.value()
         
         # Reset file statuses
         for batch_file in self.batch_files:
