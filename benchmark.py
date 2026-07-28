@@ -17,10 +17,7 @@ torch.set_float32_matmul_precision("high")
 
 # Linux requires 'spawn' for CUDA multiprocessing (default 'fork' crashes)
 import multiprocessing as _mp
-try:
-    _mp.set_start_method('spawn')
-except RuntimeError:
-    pass  # already set
+_mp.set_start_method('spawn', force=True)
 
 BENCHMARK_TEXTS = [
     "The quick brown fox jumps over the lazy dog near the river bank.",
