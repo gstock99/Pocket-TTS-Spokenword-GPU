@@ -1,0 +1,92 @@
+resutls:
+============================================================
+SINGLE WORKER BENCHMARK
+============================================================
+torch 2.13.0+cu130, CUDA True
+GPU: NVIDIA GeForce RTX 5070
+VRAM: 12.8 GB
+
+Model loaded on cuda
+Voice loaded (built-in alba)
+
+  Chunk 1: gen=1.15s, audio=4.0s
+  Chunk 2: gen=1.53s, audio=5.4s
+  Chunk 3: gen=1.55s, audio=5.0s
+  Chunk 4: gen=1.63s, audio=5.2s
+  Chunk 5: gen=1.37s, audio=4.5s
+  Chunk 6: gen=1.95s, audio=6.4s
+  Chunk 7: gen=1.84s, audio=6.6s
+  Chunk 8: gen=1.53s, audio=5.4s
+
+Result: 12.54s for 42.6s audio = 3.4x realtime
+
+============================================================
+MULTI-WORKER BENCHMARK (6 workers)
+============================================================
+  Worker 0: gen=2.58s, audio=4.1s
+  Worker 0: gen=2.85s, audio=5.0s
+  Worker 0: gen=2.68s, audio=4.6s
+  Worker 0: gen=3.02s, audio=5.1s
+  Worker 0: gen=3.94s, audio=6.8s
+  Worker 0: gen=4.12s, audio=6.6s
+  Worker 0: gen=4.02s, audio=6.5s
+  Worker 0: gen=3.02s, audio=5.9s
+  Worker 1: gen=2.24s, audio=3.4s
+  Worker 1: gen=2.91s, audio=5.0s
+  Worker 1: gen=2.82s, audio=4.8s
+  Worker 1: gen=3.28s, audio=5.8s
+  Worker 1: gen=2.99s, audio=5.2s
+  Worker 1: gen=4.02s, audio=6.6s
+  Worker 1: gen=3.89s, audio=6.4s
+  Worker 1: gen=3.27s, audio=5.7s
+  Worker 2: gen=2.30s, audio=3.6s
+  Worker 2: gen=2.68s, audio=4.6s
+  Worker 2: gen=2.82s, audio=4.6s
+  Worker 2: gen=2.82s, audio=4.9s
+  Worker 2: gen=3.09s, audio=5.4s
+  Worker 2: gen=4.37s, audio=7.3s
+  Worker 2: gen=3.66s, audio=5.9s
+  Worker 2: gen=3.39s, audio=5.7s
+  Worker 3: gen=2.66s, audio=4.3s
+  Worker 3: gen=3.02s, audio=5.2s
+  Worker 3: gen=2.65s, audio=4.6s
+  Worker 3: gen=3.09s, audio=5.3s
+  Worker 3: gen=3.10s, audio=5.3s
+  Worker 3: gen=3.71s, audio=6.2s
+  Worker 3: gen=3.63s, audio=6.0s
+  Worker 3: gen=3.29s, audio=5.4s
+  Worker 4: gen=2.44s, audio=3.9s
+  Worker 4: gen=2.70s, audio=4.8s
+  Worker 4: gen=2.84s, audio=4.9s
+  Worker 4: gen=2.83s, audio=5.0s
+  Worker 4: gen=2.47s, audio=4.4s
+  Worker 4: gen=3.81s, audio=6.6s
+  Worker 4: gen=4.31s, audio=6.9s
+  Worker 4: gen=3.42s, audio=5.6s
+  Worker 5: gen=2.95s, audio=4.7s
+  Worker 5: gen=3.46s, audio=5.9s
+  Worker 5: gen=2.63s, audio=4.7s
+  Worker 5: gen=3.13s, audio=5.4s
+  Worker 5: gen=2.58s, audio=4.4s
+  Worker 5: gen=4.01s, audio=6.4s
+  Worker 5: gen=3.87s, audio=6.3s
+  Worker 5: gen=3.07s, audio=5.4s
+
+Result: 33.46s for 257.3s audio = 7.7x realtime
+
+============================================================
+SUMMARY
+============================================================
+  Single worker:  3.4x realtime
+  Multi worker:   7.7x realtime
+  Parallel speedup: 2.3x
+
+Environment info:
+  OS: win32
+  Python: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+  PyTorch: 2.13.0+cu130
+  CUDA: 13.0
+  cuDNN: 92000
+  GPU: NVIDIA GeForce RTX 5070
+  cudnn.benchmark: False
+  float32_matmul_precision: high
