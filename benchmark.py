@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 """
 Benchmark script for Pocket-TTS-Spokenword-GPU
 Tests single-worker and multi-worker GPU performance.
 
-Usage: python benchmark.py
+Usage: python benchmark.py  or  ./benchmark.py
 """
 
 import sys
