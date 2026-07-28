@@ -97,7 +97,7 @@ def benchmark_multi_worker(num_workers=6):
 
     manager = Manager()
     result_dict = manager.dict()
-    chunks_per_worker = 2
+    chunks_per_worker = 8
 
     start = time.time()
     procs = []
