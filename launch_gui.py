@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Enable TensorFloat32 for better Blackwell performance
 import torch
 torch.set_float32_matmul_precision('high')
-torch.backends.cudnn.benchmark = True
 
 from pocket_tts.gui.main_window import main
 

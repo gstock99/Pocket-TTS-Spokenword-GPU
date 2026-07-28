@@ -13,7 +13,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import torch
 torch.set_float32_matmul_precision("high")
-torch.backends.cudnn.benchmark = True
 
 BENCHMARK_TEXTS = [
     "The quick brown fox jumps over the lazy dog near the river bank.",
@@ -30,7 +29,6 @@ BENCHMARK_TEXTS = [
 def _worker_fn(worker_id, num_chunks, result_dict):
     import torch
     torch.set_float32_matmul_precision("high")
-    torch.backends.cudnn.benchmark = True
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from pocket_tts.models.tts_model import TTSModel
 
