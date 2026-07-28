@@ -674,28 +674,28 @@ class TTSModel(nn.Module):
         Returns:
         None
         """
+        device = next(iter(self.flow_lm.parameters())).device
         backbone_input = torch.full(
             (1, 1, self.flow_lm.ldim),
             fill_value=float("NaN"),
-            device=next(iter(self.flow_lm.parameters())).device,
+            device=device,
             dtype=self.flow_lm.dtype,
         )
         steps_times = []
         eos_step = None
         for generation_step in range(max_gen_len):
-            with display_execution_time("Generating latent", print_output=False) as timer:
-                next_latent, is_eos = self._run_flow_lm_and_increment_step(
-                    model_state=model_state, backbone_input_latents=backbone_input
-                )
-                if is_eos.item() and eos_step is None:
-                    eos_step = generation_step
-                if eos_step is not None and generation_step >= eos_step + frames_after_eos:
-                    break
+            t0 = time.monotonic()
+            next_latent, is_eos = self._run_flow_lm_and_increment_step(
+                model_state=model_state, backbone_input_latents=backbone_input
+            )
+            if eos_step is None and is_eos.item():
+                eos_step = generation_step
+            if eos_step is not None and generation_step >= eos_step + frames_after_eos:
+                break
 
-                # Add generated latent to queue for immediate decoding
-                latents_queue.put(next_latent)
-                backbone_input = next_latent
-            steps_times.append(timer.elapsed_time_ms)
+            latents_queue.put(next_latent)
+            backbone_input = next_latent
+            steps_times.append((time.monotonic() - t0) * 1000)
         else:
             if os.environ.get("KPOCKET_TTS_ERROR_WITHOUT_EOS", "0") == "1":
                 raise RuntimeError("Generation reached maximum length without EOS!")
