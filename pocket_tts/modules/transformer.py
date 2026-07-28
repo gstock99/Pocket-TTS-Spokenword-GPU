@@ -222,7 +222,7 @@ class StreamingMultiheadAttention(StatefulModule):
         """Applies a forward pass through the transformer layer.
         Args:
         query (torch.Tensor): The input tensor for the query.
-        model_state (dict | None): Dictionary containing the current state of the model.
+        model_state (dict | None): Dictionary containing the current model state.
         Returns:
         torch.Tensor: The output tensor after applying the forward pass.
         """
@@ -237,10 +237,14 @@ class StreamingMultiheadAttention(StatefulModule):
         q, k = self._apply_rope(q, k, state)
         k, v = self._complete_kv(k, v, state)
 
-        mask_shape = (query.shape[1], query.shape[1] + state["current_end"].shape[0])
-        shift = state["current_end"].shape[0]
-
-        attn_mask = self._get_mask(mask_shape, shift=shift, device=q.device)
+        # For streaming single-step (t=1), the causal mask is trivially all-valid
+        # (all zeros in log-space). Skip mask creation and pass None to SDPA.
+        if t == 1:
+            attn_mask = None
+        else:
+            mask_shape = (t, t + state["current_end"].shape[0])
+            shift = state["current_end"].shape[0]
+            attn_mask = self._get_mask(mask_shape, shift=shift, device=q.device)
 
         q, k, v = [x.transpose(1, 2) for x in (q, k, v)]
         x = F.scaled_dot_product_attention(q, k, v, attn_mask)

@@ -2,7 +2,6 @@ from typing import NamedTuple
 
 import torch
 import torch.nn as nn
-from einops import rearrange
 from torch.nn import functional as F
 from typing_extensions import Self
 
@@ -37,7 +36,8 @@ class KVCacheResult(NamedTuple):
 
 
 def complete(
-    cache: torch.Tensor, end_offset: torch.Tensor, k: torch.Tensor, v: torch.Tensor
+    cache: torch.Tensor, end_offset: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
+    capacity_indexes: torch.Tensor | None = None,
 ) -> KVCacheResult:
     """Updates a cache tensor with new key and value tensors based on end offsets.
     Args:
@@ -45,6 +45,7 @@ def complete(
     end_offset (torch.Tensor): The end offset for each sequence in the batch.
     k (torch.Tensor): The input key tensor.
     v (torch.Tensor): The input value tensor.
+    capacity_indexes (torch.Tensor): Optional pre-allocated arange of [0..capacity).
     Returns:
     KVCacheResult: The updated cache tensor.
     """
@@ -55,9 +56,6 @@ def complete(
     indexes = torch.arange(T, device=end_offset.device, dtype=end_offset.dtype)
     indexes = indexes + end_offset.view(-1, 1)
     indexes = indexes % capacity
-    # indexes is [B, T]
-    # k is [B, H, T, D]
-    # cache is [B, H, T', D]
     this_indexes = indexes.view(B, 1, T, 1)
     this_indexes = this_indexes.expand(-1, H, T, D)
     cache[0].scatter_(2, this_indexes, k)
@@ -66,9 +64,11 @@ def complete(
     keys = cache[0]
     values = cache[1]
 
-    indexes = torch.arange(capacity, device=end_offset.device, dtype=torch.long)
+    if capacity_indexes is not None:
+        indexes = capacity_indexes
+    else:
+        indexes = torch.arange(capacity, device=end_offset.device, dtype=torch.long)
 
-    # end_index correspond to the actual index where the last value was written.
     last_offset = end_offset.view(-1, 1) + T - 1
     end_index = last_offset % capacity
     delta = indexes - end_index
@@ -103,13 +103,7 @@ class MimiStreamingMultiheadAttention(StatefulModule):
         self.in_proj = nn.Linear(embed_dim, out_dim, bias=False)
 
     def init_state(self, batch_size: int, sequence_length: int) -> dict[str, torch.Tensor]:
-        """Initializes the state for a transformer model.
-        Args:
-        batch_size (int): The size of the batch.
-        sequence_length (int): The length of the input sequence.
-        Returns:
-        dict[str, torch.Tensor]: A dictionary containing the initialized state with keys "offset", "cache", and "end_offset".
-        """
+        """Initializes the state for a transformer model."""
         dim_per_head = self.embed_dim // self.num_heads
 
         state = {}
@@ -118,30 +112,22 @@ class MimiStreamingMultiheadAttention(StatefulModule):
         state["offset"] = torch.zeros(batch_size, dtype=torch.long, device=device)
         state["cache"] = torch.zeros((2, batch_size, self.num_heads, sequence_length, dim_per_head), device=device, dtype=dtype)
         state["end_offset"] = torch.zeros(batch_size, dtype=torch.long, device=device)
+        # Pre-allocate capacity indexes to avoid torch.arange per call
+        state["capacity_indexes"] = torch.arange(sequence_length, device=device, dtype=torch.long)
         return state
 
     def increment_step(self, state, increment: int = 1):
-        """Increments the offset in the given state by a specified value.
-        Args:
-        state (dict): The state dictionary containing the offset.
-        increment (int, optional): The amount to increment the offset by. Defaults to 1.
-        Returns:
-        None: Modifies the state dictionary in place.
-        """
+        """Increments the offset in the given state by a specified value."""
         state["offset"] += increment
 
     def _complete_kv(self, k, v, model_state: dict | None) -> KVCacheResult:
-        """Completes key-value pairs in the model state.
-        Args:
-        k (any): Key to be completed.
-        v (any): Value associated with the key.
-        model_state (dict or None): Current state of the model. If None, initializes a new state.
-        Returns:
-        KVCacheResult: Result of completing the key-value pair.
-        """
+        """Completes key-value pairs in the model state."""
         if model_state is None:
             return KVCacheResult.from_kv(k, v)
         else:
+            layer_state = self.get_state(model_state)
+            return complete(layer_state["cache"], layer_state["end_offset"], k, v,
+                           capacity_indexes=layer_state.get("capacity_indexes"))
             layer_state = self.get_state(model_state)
             return complete(layer_state["cache"], layer_state["end_offset"], k, v)
 
@@ -162,7 +148,9 @@ class MimiStreamingMultiheadAttention(StatefulModule):
 
         projected = self.in_proj(query)
 
-        q, k, v = rearrange(projected, "b t (p h d) -> p b h t d", p=3, h=self.num_heads)
+        # Native view/permute instead of einops.rearrange
+        packed = projected.view(B, T, 3, self.num_heads, -1)
+        q, k, v = packed.permute(2, 0, 3, 1, 4).unbind(0)
 
         # Permute from [b, h, t, d] to [b, t, h, d] for rope
         q = q.permute(0, 2, 1, 3)
@@ -184,7 +172,8 @@ class MimiStreamingMultiheadAttention(StatefulModule):
 
         x = F.scaled_dot_product_attention(q, k, v, attn_bias, dropout_p=0.0)
 
-        x = rearrange(x, "b h t d -> b t (h d)")
+        # Native permute+reshape instead of einops.rearrange
+        x = x.permute(0, 2, 1, 3).reshape(B, T, -1)
         x = self.out_proj(x)
         return x
 
@@ -238,30 +227,20 @@ class StreamingTransformerLayer(nn.Module):
             self.layer_scale_2 = LayerScale(d_model, layer_scale)
 
     def _ff_block(self, x: torch.Tensor) -> torch.Tensor:
-        """This class defines a transformer block consisting of self-attention and feed-forward sub-layers.
-        Args:
-        x (torch.Tensor): The input tensor.
-        model_state (dict | None): Optional dictionary containing model state.
-        Returns:
-        torch.Tensor: The output tensor after applying the transformer block.
-        """
+        """Feed-forward block with residual connection."""
         x_orig = x
         x = self.norm2(x)
         update = self.linear2(F.gelu(self.linear1(x)))
-        return x_orig.to(update) + self.layer_scale_2(update)
+        # Direct addition (safe in float32; re-add .to(update) if using mixed precision)
+        return x_orig + self.layer_scale_2(update)
 
     def _sa_block(self, x: torch.Tensor, model_state: dict | None) -> torch.Tensor:
-        """Applies a scaled attention block to an input tensor and returns the updated tensor.
-        Args:
-        x (torch.Tensor): Input tensor.
-        model_state (dict | None): Optional dictionary containing model state.
-        Returns:
-        torch.Tensor: Updated tensor after applying the scaled attention block.
-        """
+        """Self-attention block with residual connection."""
         x_orig = x
         x = self.norm1(x)
         update = self.self_attn(x, model_state)
-        return x_orig.to(update) + self.layer_scale_1(update)
+        # Direct addition (safe in float32; re-add .to(update) if using mixed precision)
+        return x_orig + self.layer_scale_1(update)
 
     def forward(self, x: torch.Tensor, model_state: dict | None) -> torch.Tensor:
         """Applies a forward pass through the transformer model.

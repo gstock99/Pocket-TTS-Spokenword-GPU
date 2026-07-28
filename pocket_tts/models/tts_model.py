@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 import queue
@@ -42,6 +41,28 @@ from pocket_tts.utils.weights_loading import get_flow_lm_state_dict, get_mimi_st
 
 torch.set_num_threads(1)
 logger = logging.getLogger(__name__)
+
+# Tensors that are modified in-place and must be cloned for safe state copies
+_INPLACE_KEYS = frozenset({"end_offset", "cache"})
+
+
+def _copy_model_state(state: dict) -> dict:
+    """Efficiently copy model state without deepcopy.
+
+    Only clones tensors that are modified in-place (end_offset, cache).
+    Other tensors (offset, capacity_indexes) are shared since they are
+    either not modified or use augmented assignment (creates new tensor).
+    """
+    result = {}
+    for module_name, module_state in state.items():
+        new_module_state = {}
+        for key, value in module_state.items():
+            if isinstance(value, torch.Tensor) and key in _INPLACE_KEYS:
+                new_module_state[key] = value.clone()
+            else:
+                new_module_state[key] = value
+        result[module_name] = new_module_state
+    return result
 
 
 class TTSModel(nn.Module):
@@ -539,17 +560,9 @@ class TTSModel(nn.Module):
     def _generate_audio_stream_short_text(
         self, model_state: dict, text_to_generate: str, frames_after_eos: int, copy_state: bool
     ):
-        """Generates an audio stream for short text using a model state.
-        Args:
-        model_state (dict): The current state of the model.
-        text_to_generate (str): The text to generate audio for.
-        frames_after_eos (int): Number of frames to process after end-of-sentence.
-        copy_state (bool): Whether to copy the model state before modifying it.
-        Returns:
-        None
-        """
+        """Generates an audio stream for short text using a model state."""
         if copy_state:
-            model_state = copy.deepcopy(model_state)
+            model_state = _copy_model_state(model_state)
 
         # Set up multithreaded generation and decoding
         latents_queue = queue.Queue()

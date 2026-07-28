@@ -1,7 +1,17 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import torch
 from torch import nn
+
+
+def _get_stateful_modules(model: nn.Module) -> list[tuple[str, "StatefulModule"]]:
+    """Collect all StatefulModule children once, return as a list."""
+    result = []
+    for module_name, module in model.named_modules():
+        if isinstance(module, StatefulModule):
+            result.append((module_name, module))
+    return result
 
 
 def init_states(
@@ -38,18 +48,24 @@ def increment_steps(
     module: nn.Module, model_state: dict[str, dict[str, torch.Tensor]], increment: int = 1
 ):
     """Increments the step counter of stateful modules in a model.
+    Uses a cached module list to avoid repeated named_modules() traversal.
+
     Args:
     module (nn.Module): The root module to search for stateful modules.
     model_state (dict[str, dict[str, torch.Tensor]]): A dictionary containing model states by module name.
-    increment (int, optional): The amount to increment each step counter. Default is 1.
+    increment (int, optional): The amount to increase each step counter by. Default is 1.
     Returns:
     None
     """
-    # print("incrementing steps by", increment)
-    for module_name, module in module.named_modules():
-        if not isinstance(module, StatefulModule):
-            continue
-        module.increment_step(model_state[module_name], increment)
+    # Use cached list of stateful modules if available, otherwise build it
+    cache_key = "_stateful_modules_cache"
+    cached = getattr(module, cache_key, None)
+    if cached is None:
+        cached = _get_stateful_modules(module)
+        object.__setattr__(module, cache_key, cached)
+
+    for module_name, mod in cached:
+        mod.increment_step(model_state[module_name], increment)
 
 
 class StatefulModule(ABC, nn.Module):
@@ -59,7 +75,7 @@ class StatefulModule(ABC, nn.Module):
     Provides methods to increment the step counter and retrieve the module's state from a model state dictionary.
     """
     def __init__(self, *args, **kwds):
-        """Initialize a module with optional arguments and keyword arguments.
+        """Initialize a module with optional arguments and key word arguments.
         Args:
         *args: Variable length argument list.
         **kwds: Arbitrary keyword arguments.
