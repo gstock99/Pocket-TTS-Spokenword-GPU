@@ -15,6 +15,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import torch
 torch.set_float32_matmul_precision("high")
 
+# Linux requires 'spawn' for CUDA multiprocessing (default 'fork' crashes)
+import multiprocessing as _mp
+try:
+    _mp.set_start_method('spawn')
+except RuntimeError:
+    pass  # already set
+
 BENCHMARK_TEXTS = [
     "The quick brown fox jumps over the lazy dog near the river bank.",
     "In the distance, the mountains rose like ancient sentinels against the darkening sky.",
