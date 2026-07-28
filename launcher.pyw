@@ -16,8 +16,15 @@ from pathlib import Path
 
 
 INSTALL_DIR = Path(__file__).resolve().parent
-BUNDLED_PYTHON = INSTALL_DIR / "python" / "python.exe"
-BUNDLED_PYTHONW = INSTALL_DIR / "python" / "pythonw.exe"
+# Prefer full Python (with dev headers for torch.compile) over embedded Python
+FULL_PYTHON = Path(r"A:\Program Files\Python\Python312\python.exe")
+FULL_PYTHONW = Path(r"A:\Program Files\Python\Python312\pythonw.exe")
+if FULL_PYTHON.exists():
+    BUNDLED_PYTHON = FULL_PYTHON
+    BUNDLED_PYTHONW = FULL_PYTHONW
+else:
+    BUNDLED_PYTHON = INSTALL_DIR / "python" / "python.exe"
+    BUNDLED_PYTHONW = INSTALL_DIR / "python" / "pythonw.exe"
 LAUNCH_GUI = INSTALL_DIR / "launch_gui.py"
 REQUIREMENTS_TXT = INSTALL_DIR / "requirements_windows.txt"
 SETUP_MARKER = INSTALL_DIR / ".setup_complete"

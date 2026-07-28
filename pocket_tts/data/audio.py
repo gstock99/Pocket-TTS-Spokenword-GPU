@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import soundfile as sf
 import torch
 from beartype.typing import Iterator
 
@@ -21,22 +22,12 @@ FIRST_CHUNK_LENGTH_SECONDS = float(os.environ.get("FIRST_CHUNK_LENGTH_SECONDS", 
 
 
 def audio_read(filepath: str | Path) -> tuple[torch.Tensor, int]:
-    """Read audio using Python's wave module."""
-    with wave.open(str(filepath), "rb") as wav_file:
-        sample_rate = wav_file.getframerate()
-
-        # Check for supported sample width (16-bit)
-        sampwidth = wav_file.getsampwidth()
-        if sampwidth != 2:
-            raise ValueError(f"Unsupported WAV sample width ({sampwidth*8} bits). Please convert your audio file to 16-bit PCM (WAV) format.")
-
-        # Read all audio data as 16-bit signed integers
-        raw_data = wav_file.readframes(-1)
-        samples = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
-
-        # Return as mono tensor (channels, samples)
-        wav = torch.from_numpy(samples.reshape(1, -1))
-        return wav, sample_rate
+    """Read audio using soundfile for universal format support."""
+    data, sample_rate = sf.read(str(filepath), dtype="float32")
+    if data.ndim > 1:
+        data = data.mean(axis=1)
+    wav = torch.from_numpy(data.reshape(1, -1))
+    return wav, sample_rate
 
 
 class StreamingWAVWriter:
