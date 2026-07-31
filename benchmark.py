@@ -128,16 +128,59 @@ def benchmark_multi_worker(num_workers=6):
     return rtf
 
 
-if __name__ == "__main__":
-    single = benchmark_single_worker()
-    multi = benchmark_multi_worker()
+def benchmark_worker_sweep(worker_counts=(1, 2, 3, 4, 6)):
+    """Sweep worker counts to find the throughput plateau on this platform.
+
+    Skips re-running 1 worker if the single-worker benchmark already ran.
+    """
+    print("\n" + "=" * 60)
+    print("WORKER COUNT SWEEP")
+    print("=" * 60)
+    results = {}
+    for n in worker_counts:
+        results[n] = benchmark_multi_worker(num_workers=n)
 
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("SWEEP SUMMARY (Windows plateau test)")
     print("=" * 60)
-    print(f"  Single worker:  {single:.1f}x realtime")
-    print(f"  Multi worker:   {multi:.1f}x realtime")
-    print(f"  Parallel speedup: {multi / single:.1f}x")
+    print(f"  {'Workers':<10}{'RTF':<12}{'Delta':<12}{'Efficiency':<12}")
+    print(f"  {'-------':<10}{'---':<12}{'-----':<12}{'----------':<12}")
+    prev = None
+    for n in worker_counts:
+        rtf = results[n]
+        delta = f"+{(rtf - prev):.1f}x" if prev is not None else "-"
+        eff = f"{(rtf / n):.2f}x/worker" if n > 0 else "-"
+        print(f"  {n:<10}{rtf:<12.1f}x{delta:<12}{eff:<12}")
+        prev = rtf
+    best = max(results, key=results.get)
+    print(f"\n  Best worker count: {best} ({results[best]:.1f}x realtime)")
+    return results
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Pocket-TTS-GPU benchmark")
+    parser.add_argument("--sweep", action="store_true",
+                        help="Sweep worker counts (1,2,3,4,6) to find plateau")
+    parser.add_argument("--workers", type=int, default=6,
+                        help="Worker count for multi-worker benchmark (default: 6)")
+    args = parser.parse_args()
+
+    single = benchmark_single_worker()
+
+    if args.sweep:
+        multi = benchmark_worker_sweep()
+    else:
+        multi = {args.workers: benchmark_multi_worker(num_workers=args.workers)}
+        best_rtf = multi[args.workers]
+        best_workers = args.workers
+        print("\n" + "=" * 60)
+        print("SUMMARY")
+        print("=" * 60)
+        print(f"  Single worker:  {single:.1f}x realtime")
+        print(f"  Multi worker:   {best_rtf:.1f}x realtime")
+        print(f"  Parallel speedup: {best_rtf / single:.1f}x")
+
     print()
     print("Environment info:")
     print(f"  OS: {sys.platform}")

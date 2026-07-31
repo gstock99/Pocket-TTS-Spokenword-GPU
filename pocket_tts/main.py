@@ -702,4 +702,8 @@ def test_preprocessing(text_file: str, output_json: str = None):
 
 
 if __name__ == "__main__":
+    # Deliberate multiprocessing start method: spawn is required for CUDA
+    # workers on both Windows and Linux (fork inherits GPU state and crashes).
+    import multiprocessing as _mp
+    _mp.set_start_method('spawn', force=True)
     cli_app()
