@@ -476,7 +476,8 @@ class AudiobookGenerator:
                 )
                 asr_script = 'ASR/asr_validator.py'
                 monitor_folder = str(Path(dataset_paths['audio_chunks_dir']))
-                asr_failure_log = str(Path(dataset_paths['tts_dir']) / 'asr_failures.json')
+                output_stem = Path(output_path).stem
+                asr_failure_log = str(Path(dataset_paths['tts_dir']) / f'asr_failures_{output_stem}.json')
                 threshold = asr_config.get('threshold', 0.85)
 
                 # Ensure monitor folder exists before launching ASR
@@ -501,7 +502,9 @@ class AudiobookGenerator:
                          '--threshold', str(threshold)],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        text=True
+                        text=True,
+                        encoding='utf-8',
+                        errors='replace'
                     )
                     logger.info(f"ASR monitor launched: {asr_exe} {asr_script}")
                     logger.info(f"ASR monitoring: {monitor_folder}")
@@ -1236,6 +1239,11 @@ class AudiobookGenerator:
         failed_dir.mkdir(exist_ok=True)
         logger.info(f"ASR debug files will be organized in: {failed_dir}")
 
+        # Prefix preserved files with the full chapter filename stem so evidence
+        # stays identifiable and collision-free across chapters sharing this folder
+        log_stem = Path(failure_log_path).stem
+        chapter_prefix = log_stem.removeprefix("asr_failures_")
+
         reprocessed_count = 0
         failed_permanently = 0
         investigation_log = []
@@ -1373,7 +1381,7 @@ class AudiobookGenerator:
                     if not candidate.get("is_original"):
                         temp_path = Path(candidate["audio_path"])
                         if temp_path.exists():
-                            failed_attempt_path = failed_dir / f"chunk_{chunk_num}_attempt_{candidate['attempt']}.wav"
+                            failed_attempt_path = failed_dir / f"{chapter_prefix}_chunk_{chunk_num}_attempt_{candidate['attempt']}.wav"
                             try:
                                 temp_path.rename(failed_attempt_path)
                             except Exception as e:
@@ -1385,7 +1393,7 @@ class AudiobookGenerator:
             else:
                 # Regeneration wins: move original to Failed/ before saving winner
                 if original_chunk_path.exists():
-                    original_failed_path = failed_dir / chunk_filename
+                    original_failed_path = failed_dir / f"{chapter_prefix}_{chunk_filename}"
                     try:
                         original_chunk_path.rename(original_failed_path)
                     except Exception as e:
@@ -1402,7 +1410,7 @@ class AudiobookGenerator:
                     if not candidate.get("is_original"):
                         temp_path = Path(candidate["audio_path"])
                         if temp_path.exists():
-                            failed_attempt_path = failed_dir / f"chunk_{chunk_num}_attempt_{candidate['attempt']}.wav"
+                            failed_attempt_path = failed_dir / f"{chapter_prefix}_chunk_{chunk_num}_attempt_{candidate['attempt']}.wav"
                             try:
                                 temp_path.rename(failed_attempt_path)
                             except Exception as e:
@@ -1505,6 +1513,8 @@ class AudiobookGenerator:
                 command,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 timeout=120
             )
 
