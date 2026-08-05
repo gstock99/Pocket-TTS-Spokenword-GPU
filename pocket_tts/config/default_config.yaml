@@ -8,8 +8,8 @@ device:
   max_nb_tokens_in_a_chunk: 50
 chunking:
   mode: paragraph
-  min_words: 40
-  max_words: 125
+  min_words: 100
+  max_words: 240
   respect_boundaries: true
 quality:
   lsd_steps: 4

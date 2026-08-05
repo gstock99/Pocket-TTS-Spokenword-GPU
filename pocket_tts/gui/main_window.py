@@ -345,7 +345,7 @@ class AudiobookGenerator(QMainWindow):
         chunking_layout.addRow("Mode:", self.chunking_mode_combo)
 
         self.min_words_spin = QSpinBox()
-        self.min_words_spin.setRange(1, 100)
+        self.min_words_spin.setRange(1, 250)
         chunking_layout.addRow("Min Words:", self.min_words_spin)
 
         self.max_words_spin = QSpinBox()
