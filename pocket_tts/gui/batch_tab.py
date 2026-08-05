@@ -179,7 +179,9 @@ class BatchGenerationThread(QThread):
             max_words=self.params.get('max_words', 175),
             respect_boundaries=True
         )
-        analyzer = EmotionAnalyzer()
+        if getattr(self, '_emotion_analyzer', None) is None:
+            self._emotion_analyzer = EmotionAnalyzer()
+        analyzer = self._emotion_analyzer
         
         # Get pause settings
         pi_enabled = self.params.get('pause_injection_enabled', False)

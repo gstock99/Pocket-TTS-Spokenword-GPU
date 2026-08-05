@@ -875,7 +875,9 @@ class AudiobookGenerator(QMainWindow):
                 max_words=self.config.chunking['max_words'],
                 respect_boundaries=self.config.chunking.get('respect_boundaries', True)
             )
-            analyzer = EmotionAnalyzer()
+            if getattr(self, '_emotion_analyzer', None) is None:
+                self._emotion_analyzer = EmotionAnalyzer()
+            analyzer = self._emotion_analyzer
 
             # Use the passed-in boundary pause values (which may be zeroed if pause injection is enabled)
             boundary_pauses = {

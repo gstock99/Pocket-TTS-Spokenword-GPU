@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 
 _ASR_VENV_RELATIVE_PATHS = ("ASR/venv/bin/python", "ASR/venv/Scripts/python.exe")
 
+# Skip the ffmpeg atempo subprocess when the speed adjustment is below this
+# threshold - the audible difference is negligible but the subprocess cost is not.
+ATEMPO_SKIP_EPSILON = 0.03
+
 
 def _resolve_asr_executable(configured_path: str) -> str:
     """Adapt the configured ASR interpreter path to the current platform.
@@ -992,7 +996,7 @@ class AudiobookGenerator:
                 )
 
             # --- SPEED ADJUSTMENT (emotion-based, FFmpeg atempo) ---
-            if speed_factor != 1.0:
+            if abs(speed_factor - 1.0) >= ATEMPO_SKIP_EPSILON:
                 logger.debug(f"Applying speed adjustment: {speed_factor:.4f}x")
                 audio = self._ffmpeg_atempo(audio, speed_factor)
 
@@ -1765,10 +1769,9 @@ def _queue_worker(chunk_queue: Any, voice_path: str, output_dir: str, result_que
                     )
 
                 # --- SPEED ADJUSTMENT (emotion-based, FFmpeg atempo) ---
-                if speed_factor != 1.0:
-                    worker_logger.debug(f"Applying speed adjustment: {speed_factor:.4f}x")
-                    # Shared ffmpeg helper via the module-level _ffmpeg_atempo function
-                    audio = _ffmpeg_atempo_standalone(tts_model, audio, speed_factor)
+                    if abs(speed_factor - 1.0) >= ATEMPO_SKIP_EPSILON:
+                        worker_logger.debug(f"Applying speed adjustment: {speed_factor:.4f}x")
+                        audio = _ffmpeg_atempo_standalone(tts_model, audio, speed_factor)
 
                 gen_time = time.time() - gen_start
                 total_generation_time += gen_time

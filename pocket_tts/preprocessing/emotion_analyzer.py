@@ -196,7 +196,7 @@ class EmotionAnalyzer:
 
         try:
             # Batch process with pipeline
-            results = self.pipeline(texts)
+            results = self.pipeline(texts, batch_size=32)
 
             batch_results = []
             for i, text_result in enumerate(results):
