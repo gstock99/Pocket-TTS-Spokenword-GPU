@@ -90,7 +90,8 @@ class RotaryEmbedding(nn.Module):
         if T == 1:
             return torch.tensor(offset, device=device, dtype=torch.float32).view(1, 1, 1)
         if self._ts_buffer is None or self._ts_buffer.shape[0] < T:
-            self._ts_buffer = torch.arange(self._max_seq_len, device=device, dtype=torch.float32)
+            size = max(self._max_seq_len, T)
+            self._ts_buffer = torch.arange(size, device=device, dtype=torch.float32)
         return (self._ts_buffer[:T] + offset).view(-1, 1, 1)
 
     def forward(self, q: torch.Tensor, k: torch.Tensor, offset: torch.Tensor | int):
